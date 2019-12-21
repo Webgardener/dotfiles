@@ -115,6 +115,7 @@ if ! shopt -oq posix; then
 fi
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+# need to install AG :   apt-get install silversearcher-ag
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git --nocolor -g ""'
 
 export GOPATH=$HOME/work

@@ -2,8 +2,7 @@
 " NERDTree configuration
 """"""""""""""""""""""""""""
 "Open NERDTree: Leader + t (tree)
-nnoremap <leader>t :NERDTree<cr>
-nnoremap <leader>oc :NERDTreeFind<cr>
+nnoremap <c-t> :NERDTree<cr>
 
 " Ignore .pyc files
 let NERDTreeIgnore = ['\.pyc$', '\.git']
