@@ -1,0 +1,10 @@
+[alias]
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	lola     = log --graph --decorate --pretty=oneline --abbrev-commit --all
+	history = log --pretty=format:\"[%h] %ae, %ar: %s\" --stat
+	poule = ! bash -c 'source $HOME/dotfiles/shell/poule.sh && poule && git pull'
+[core]
+	editor = vim
+[include]
+	path = .gitconfig.user
+
