@@ -33,7 +33,7 @@ alias krm='kubectl delete'
 alias ksysrm='kubectl --namespace=kube-system delete'
 alias krun='kubectl run --rm --restart=Never --image-pull-policy=IfNotPresent -i -t'
 alias ksysrun='kubectl --namespace=kube-system run --rm --restart=Never --image-pull-policy=IfNotPresent -i -t'
-alias kgpo='kubectl get pods'
+alias kgp='kubectl get pods'
 alias ksysgpo='kubectl --namespace=kube-system get pods'
 alias kdpo='kubectl describe pods'
 alias ksysdpo='kubectl --namespace=kube-system describe pods'
@@ -802,3 +802,4 @@ alias kgwslowiden='kubectl get --watch --show-labels -o=wide --namespace'
 alias kgpowslowiden='kubectl get pods --watch --show-labels -o=wide --namespace'
 alias kgdepwslowiden='kubectl get deployment --watch --show-labels -o=wide --namespace'
 
+source <(kubectl completion bash | sed 's/kubectl/kc/g')
