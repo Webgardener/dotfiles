@@ -1,3 +1,4 @@
+
 " Install vim-plug if it is not installed
 if empty(glob('~/.vim/autoload/plug.vim'))
    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
@@ -19,8 +20,8 @@ Plug 'airblade/vim-gitgutter'
 Plug 'edkolev/tmuxline.vim'
 
 " file/buffer search
-Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
+Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 
 " Search
 Plug 'rking/ag.vim'
@@ -36,9 +37,6 @@ Plug 'elzr/vim-json', { 'for': 'json' }
 " Terraform
 Plug 'hashivim/vim-terraform', { 'for': 'terraform' }
 Plug 'juliosueiras/vim-terraform-completion', { 'for': 'terraform' }
-
-" Autocomplete
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Ansible
 Plug 'pearofducks/ansible-vim', { 'for': 'yaml.ansible' }
