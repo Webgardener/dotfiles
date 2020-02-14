@@ -15,4 +15,6 @@ sudo mv ./kubectl /usr/local/bin/kubectl
 # install kube-ps1
 git clone https://github.com/jonmosco/kube-ps1.git
 
+# for vim
+mkdir ~/tmp/backup ~/tmp/swap ~/tmp/undo
 
