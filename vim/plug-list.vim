@@ -45,7 +45,7 @@ Plug 'pearofducks/ansible-vim', { 'for': 'yaml.ansible' }
 Plug 'tpope/vim-surround'
 
 " Autocomplete
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --gocode-completer --tern-completer' }
+Plug 'ajh17/VimCompletesMe'
 
 " Initialize plugin system
 call plug#end()
