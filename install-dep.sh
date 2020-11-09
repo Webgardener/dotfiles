@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 sudo apt update && \
 sudo apt install git tig vim silversearcher-ag tmux xsel

@@ -1,4 +1,3 @@
-
 " Install vim-plug if it is not installed
 if empty(glob('~/.vim/autoload/plug.vim'))
    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
@@ -20,8 +19,12 @@ Plug 'airblade/vim-gitgutter'
 Plug 'edkolev/tmuxline.vim'
 
 " file/buffer search
-Plug 'junegunn/fzf.vim'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+Plug 'junegunn/fzf.vim'
+
+" use solarized theme for vim
+" install solarized before https://github.com/sigurdga/gnome-terminal-colors-solarized
+Plug 'altercation/vim-colors-solarized'
 
 " Search
 Plug 'rking/ag.vim'
@@ -38,14 +41,20 @@ Plug 'elzr/vim-json', { 'for': 'json' }
 Plug 'hashivim/vim-terraform', { 'for': 'terraform' }
 Plug 'juliosueiras/vim-terraform-completion', { 'for': 'terraform' }
 
+" Autocomplete
+Plug 'Valloric/YouCompleteMe', { 'commit':'d98f896' }
+
+" Vim Man
+Plug 'vim-utils/vim-man'
+
 " Ansible
 Plug 'pearofducks/ansible-vim', { 'for': 'yaml.ansible' }
 
 " Easy surroundings editing
 Plug 'tpope/vim-surround'
 
-" Autocomplete
-Plug 'ajh17/VimCompletesMe'
+" Undo Tree
+Plug 'mbbill/undotree'
 
 " Initialize plugin system
 call plug#end()

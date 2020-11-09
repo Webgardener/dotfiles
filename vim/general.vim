@@ -4,11 +4,18 @@
 " Enable filetype indenting
 filetype plugin indent on
 
+" no wrapping code
+set nowrap
+" no beeps when error message
+set noerrorbells
+set visualbell
+
+
 " Encoding
 set encoding=utf-8
 
 " Map leader to space
-" let mapleader = "\<Space>"
+let mapleader = "\<Space>"
 
 " Map local leader to backslash
 " let maplocalleader = "\\"
@@ -56,6 +63,7 @@ set wildmenu
 syntax on
 
 " Solarized Dark theme
+set t_Co=256
 colorscheme solarized
 set background=dark
 
@@ -75,6 +83,7 @@ set listchars=tab:▸\ ,trail:·,extends:>,precedes:<,nbsp:+
 """"""""""""""""""""""""""""
 "     Text, tab, indent
 """"""""""""""""""""""""""""
+set smartindent
 " Default indentation when no filetype is detected
 setlocal tabstop=2
 setlocal softtabstop=2

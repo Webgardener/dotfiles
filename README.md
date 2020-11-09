@@ -11,7 +11,7 @@ cp shell/gitconfig ~/.gitconfig
 cp shell/bashrc ~/.bashrc
 ```
 
-Install https://github.com/altercation/vim-colors-solarized
+# Install https://github.com/altercation/vim-colors-solarized
 
 git clone https://github.com/sigurdga/gnome-terminal-colors-solarized.git et install.sh
 
