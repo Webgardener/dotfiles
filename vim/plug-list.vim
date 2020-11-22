@@ -24,8 +24,8 @@ Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 
 " Status Line
-Plug 'bling/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
+Plug 'itchyny/lightline.vim'
+Plug 'edkolev/tmuxline.vim'
 
 " Terraform
 Plug 'hashivim/vim-terraform', { 'for': 'terraform' }
