@@ -117,17 +117,30 @@ if ! shopt -oq posix; then
   fi
 fi
 
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
-export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
+# Setup fzf
+# ---------
+if [[ ! "$PATH" == *${HOME}/.fzf/bin* ]]; then
+  export PATH="${PATH:+${PATH}:}${HOME}/.fzf/bin"
+fi
+
+# Auto-completion
+# ---------------
+[[ $- == *i* ]] && source "${HOME}/.fzf/shell/completion.bash" 2> /dev/null
+
+# Key bindings
+# ------------
+source "${HOME}/.fzf/shell/key-bindings.bash"
+
+#export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
 
 export GOPATH=$HOME/work
 export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 # Kubernetes aliases
-source ~/dotfiles/shell/kubernetes.sh
+source ${HOME}/dotfiles/shell/kubernetes.sh
 
 # kube-ps1: Kubernetes prompt for bash 
-source ~/kube-ps1/kube-ps1.sh
+source ${HOME}/kube-ps1/kube-ps1.sh
 PS1='[\u@\h \W $(kube_ps1)]\$ '
 
 #kubectx and kubens

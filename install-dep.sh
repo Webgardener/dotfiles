@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 sudo apt update && \
-sudo apt install git tig vim fzf ripgrep silversearcher-ag universal-ctags fd-find tmux xsel
+sudo apt install -y git tig vim fzf ripgrep silversearcher-ag universal-ctags fd-find tmux xsel
 
 # install tmux plugin manager
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
@@ -14,6 +14,5 @@ sudo mv ./kubectl /usr/local/bin/kubectl
 # install kube-ps1
 git clone https://github.com/jonmosco/kube-ps1.git
 
-# for vim
-mkdir ~/tmp/backup ~/tmp/swap ~/tmp/undo
+mkdir -p ~/tmp/backup ~/tmp/swap ~/tmp/undo
 
