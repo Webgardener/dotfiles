@@ -22,6 +22,8 @@ Plug 'edkolev/tmuxline.vim'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 
+Plug 'jremmen/vim-ripgrep'
+
 " use solarized theme for vim
 " install solarized before https://github.com/sigurdga/gnome-terminal-colors-solarized
 Plug 'altercation/vim-colors-solarized'
@@ -41,9 +43,6 @@ Plug 'elzr/vim-json', { 'for': 'json' }
 Plug 'hashivim/vim-terraform', { 'for': 'terraform' }
 Plug 'juliosueiras/vim-terraform-completion', { 'for': 'terraform' }
 
-" Autocomplete
-Plug 'Valloric/YouCompleteMe', { 'commit':'d98f896' }
-
 " Vim Man
 Plug 'vim-utils/vim-man'
 
@@ -52,6 +51,9 @@ Plug 'pearofducks/ansible-vim', { 'for': 'yaml.ansible' }
 
 " Easy surroundings editing
 Plug 'tpope/vim-surround'
+
+" auto complete
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Undo Tree
 Plug 'mbbill/undotree'
