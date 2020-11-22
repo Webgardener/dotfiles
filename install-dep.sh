@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
 sudo apt update && \
-sudo apt install git tig vim silversearcher-ag tmux xsel
+sudo apt install git tig vim fzf ripgrep silversearcher-ag universal-ctags fd-find tmux xsel
 
-cd 
 # install tmux plugin manager
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 

@@ -15,29 +15,30 @@ Plug 'scrooloose/nerdtree', { 'on': 'NERDTree' }
 Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 
-" Airline-like tmux status bar
+" themes 
 Plug 'edkolev/tmuxline.vim'
+Plug 'joshdick/onedark.vim'
 
 " file/buffer search
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 
-Plug 'jremmen/vim-ripgrep'
+"Plug 'jremmen/vim-ripgrep'
 
 " use solarized theme for vim
 " install solarized before https://github.com/sigurdga/gnome-terminal-colors-solarized
-Plug 'altercation/vim-colors-solarized'
+" Plug 'altercation/vim-colors-solarized'
 
 " Search
-Plug 'rking/ag.vim'
-Plug 'mileszs/ack.vim'
+"Plug 'rking/ag.vim'
+"Plug 'mileszs/ack.vim'
 
 " Nice status bar
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 
 " JSON Highlight
-Plug 'elzr/vim-json', { 'for': 'json' }
+"Plug 'elzr/vim-json', { 'for': 'json' }
 
 " Terraform
 Plug 'hashivim/vim-terraform', { 'for': 'terraform' }
@@ -57,6 +58,12 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Undo Tree
 Plug 'mbbill/undotree'
+
+" Vim Rooter
+Plug 'airblade/vim-rooter'
+
+" Improve syntax highlight
+Plug 'sheerun/vim-polyglot'
 
 " Initialize plugin system
 call plug#end()

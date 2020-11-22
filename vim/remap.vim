@@ -8,11 +8,6 @@ nnoremap <leader>ev :tabedit $MYVIMRC<cr>
 " Source vim configuration inmediatly: Leader + sv (source vim)
 nnoremap <leader>sv :source $MYVIMRC<cr>
 
-""""""""""""""""""""""""""""
-"    fzf configuration
-"""""""""""""""""""""""""""""
-nnoremap <c-p> :FZF<cr>
-
 """"""""""""""""""""""
 "   Copy from vim to x11 clipboard
 """""""""""""""""""""""""""""" 
@@ -33,3 +28,4 @@ nnoremap <leader>u :UndotreeToggle<cr>
 "YCM
 nnoremap <silent> <Leader>gd :YcmCompleter Goto<CR>
 nnoremap <silent> <Leader>gf :YcmCompleter FixIt<CR>
+
