@@ -79,11 +79,6 @@ let g:onedark_termcolors=256
 colorscheme onedark
 syntax on
 
-" Solarized Dark theme
-"set t_Co=256
-"colorscheme solarized
-"set background=dark
-
 " When on, splitting a window will put the new window right of the current one.
 set splitright
 
