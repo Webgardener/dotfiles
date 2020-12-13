@@ -20,6 +20,10 @@ if (empty($TMUX))
   endif
 endif
 
+" md preview
+let vim_markdown_preview_github=1
+let vim_markdown_preview_hotkey='<C-m>'
+let vim_markdown_preview_browser='Google Chrome'
 " no wrapping code
 set nowrap
 " no beeps when error message
@@ -28,6 +32,8 @@ set visualbell
 
 " Encoding
 set encoding=utf-8
+
+set guifont=Hack:h11
 
 " Map leader to space
 let mapleader = "\<Space>"

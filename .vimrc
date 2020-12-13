@@ -14,4 +14,3 @@ endfor
 
 " Source remappings
 source $HOME/.vim/remap.vim
-

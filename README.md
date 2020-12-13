@@ -1,15 +1,23 @@
 # Install
 
-On Gnu/Linux:
-```
+Requires vim 8.2+
+
+On GNU/Linux (debian based):
+
+```shell
 git clone https://github.com/Webgardener/dotfiles.git
 cd dotfiles
 ./install-dep.sh
-cp -r vim ~/.vim
-cp vimrc ~/.vimrc
-cp tmux.conf ~/.tmux.conf
-cp tmuxlinesnapshot ~/tmuxlinesnapshot
+```
+
+Symbolic links:
+
+```shell
+ln -s ~/dotfiles/.vimrc  ~/.vimrc
+ln -s ~/dotfiles/vim  ~/.vim
+ln -s ~/dotfiles/tmux.conf ~/.tmux.conf
+ln ~/dotfiles/tmuxlinesnapshot ~/tmuxlinesnapshot
 # be careful with the following lines...
-cp shell/gitconfig ~/.gitconfig
-cp shell/bashrc ~/.bashrc
+ln ~/dotfiles/shell/gitconfig ~/.gitconfig
+ln ~/dotfiles/shell/bashrc ~/.bashrc
 ```

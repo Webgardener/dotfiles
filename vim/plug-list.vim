@@ -11,12 +11,19 @@ call plug#begin('~/.vim/plugged')
 " NERDtree will be loaded on the first invocation of NERDTreeToggle command
 Plug 'scrooloose/nerdtree', { 'on': 'NERDTree' }
 
+" MD preview (require apt install grip and apt-get install xdotool)
+Plug 'JamshedVesuna/vim-markdown-preview'
+
+" auto save
+Plug '907th/vim-auto-save'
+
+
 " GIT integration
 Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 Plug 'junegunn/gv.vim'
 
-" themes 
+" themes
 Plug 'joshdick/onedark.vim'
 
 " file/buffer search
@@ -43,5 +50,7 @@ Plug 'airblade/vim-rooter'
 " Improve syntax highlight
 Plug 'sheerun/vim-polyglot'
 
+" Devicons
+Plug 'ryanoasis/vim-devicons'
 " Initialize plugin system
 call plug#end()
