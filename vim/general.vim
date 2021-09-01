@@ -30,6 +30,7 @@ set nowrap
 set noerrorbells
 set visualbell
 
+
 " Encoding
 set encoding=utf-8
 
@@ -93,15 +94,17 @@ set splitbelow
 
 " Same as :print, but display unprintable characters with '^' and put $after
 " the line.how trailing whitespaces
-set list
-
 " Show trailing whitespaces as dashes
-set listchars=tab:▸\ ,trail:·,extends:>,precedes:<,nbsp:+
+set listchars=eol:$,tab:>-,trail:·,extends:>,precedes:<
+
+set list
 
 """"""""""""""""""""""""""""
 "     Text, tab, indent
 """"""""""""""""""""""""""""
+set autoindent
 set smartindent
+
 " Default indentation when no filetype is detected
 setlocal tabstop=2
 setlocal softtabstop=2
