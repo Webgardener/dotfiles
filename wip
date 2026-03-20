@@ -1,54 +1,34 @@
-apiVersion: skaffold/v4beta11
-kind: Config
-metadata:
-  name: dmzrasc
+vault:
+  server:
+    image:
+      repository: <registry-privee>/<chemin>/vault
+      tag: "1.17.0"        # version à adapter
+      pullPolicy: IfNotPresent
 
-build:
-  local:
-    push: false              # pas de push en local, images chargées directement dans k3d
-  artifacts:
-    - image: mon-app-a
-      context: ../../images/mon-app-a    # dossier partagé images/
-      docker:
-        dockerfile: Dockerfile
+    dev:
+      enabled: false
+    standalone:
+      enabled: true
+      config: |
+        ui = true
+        listener "tcp" {
+          tls_disable = 1
+          address     = "[::]:8200"
+        }
+        storage "file" {
+          path = "/vault/data"
+        }
+    dataStorage:
+      enabled: true
+      size: 1Gi
+      storageClass: local-path
 
-deploy:
-  helm:
-    releases:
-      - name: vault
-        chartPath: helm/wrappers/vault
-        namespace: vault-dmzrasc
-        valuesFiles:
-          - helm/values/local/vault.yaml
-        wait: true            # Skaffold attend que Vault soit Ready avant de continuer
+  injector:
+    enabled: true
+    image:
+      repository: <registry-privee>/<chemin>/vault-k8s   # image de l'injector
+      tag: "0.17.0"
 
-      - name: postgres
-        chartPath: helm/wrappers/postgres
-        namespace: managed-services
-        valuesFiles:
-          - helm/values/local/postgres.yaml
-        wait: true
-
-      - name: keycloak
-        chartPath: helm/wrappers/keycloak
-        namespace: green
-        valuesFiles:
-          - helm/values/local/keycloak.yaml
-
-portForward:
-  - resourceType: service
-    resourceName: vault
-    namespace: vault-dmzrasc
-    port: 8200
-    localPort: 8200
-
-  - resourceType: service
-    resourceName: keycloak
-    namespace: green
-    port: 80
-    localPort: 8080
-
-profiles:
-  - name: local
-    activation:
-      - kubeContext: k3d-dmzrasc
+  ui:
+    enabled: true
+    serviceType: ClusterIP
