@@ -1,54 +1,10 @@
-ENV          ?= local
-KUBE_CONTEXT  = k3d-dmzrasc
-CHARTS_DIR    = helm/charts
-VALUES_DIR    = helm/values
-
-.PHONY: deploy-vault deploy-postgres deploy-keycloak deploy-all tf-apply vault-unseal
-
-# -- Deploy helpers --
-define helm_apply
-	helm template $(1) $(CHARTS_DIR)/$(1) \
-		--namespace $(2) \
-		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
-	| kubectl --context=$(KUBE_CONTEXT) apply -f -
-endef
-
-define helm_delete
-	helm template $(1) $(CHARTS_DIR)/$(1) \
-		--namespace $(2) \
-		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
-	| kubectl --context=$(KUBE_CONTEXT) delete -f -
-endef
-
-# -- Déploiements --
-deploy-vault:
-	$(call helm_apply,vault,vault-dmzrasc)
-
-deploy-postgres:
-	$(call helm_apply,postgres,managed-services)
-
-deploy-keycloak:
-	$(call helm_apply,keycloak,green)
-
-deploy-all: deploy-vault deploy-postgres deploy-keycloak
-
-# -- Suppressions --
-delete-vault:
-	$(call helm_delete,vault,vault-dmzrasc)
-
-delete-keycloak:
-	$(call helm_delete,keycloak,green)
-
-# -- Terraform --
-tf-apply:
-	bash -c "source infra-variables.sh && export_$(ENV) && \
-	cd terraform/$(ENV) && terraform init && terraform apply -auto-approve"
-
-# -- Vault unseal --
-vault-unseal:
-	bash -c "source infra-variables.sh && export_$(ENV) && \
-	kubectl --context=$(KUBE_CONTEXT) exec -n vault-dmzrasc vault-0 -- \
-	vault operator unseal $$VAULT_UNSEAL_KEY"
-
-# -- Full bootstrap local --
-bootstrap: deploy-vault vault-unseal tf-apply deploy-postgres deploy-keycloak
+create-registry-secrets:
+ifeq ($(ENV),local)
+	@for ns in $(NAMESPACES); do \
+		echo "Creating registry secret in $$ns..."; \
+		envsubst < $(REGISTRY_SECRET_FILE) \
+		| kubectl --context=$(KUBE_CONTEXT) apply -n $$ns -f -; \
+	done
+else
+	@echo "Skipping registry secrets — managed by IBM Cloud in $(ENV)"
+endif
