@@ -1,0 +1,43 @@
+KUBE_CONTEXT  = k3d-dmzrasc
+VAULT_ADDR    = http://localhost:8200
+TF_LOCAL      = terraform/local
+
+.PHONY: up down tf-init tf-apply tf-destroy vault-unseal
+
+# Démarrage complet
+up: tf-apply skaffold-dev
+
+# Skaffold en mode watch
+skaffold-dev:
+	skaffold dev --kube-context $(KUBE_CONTEXT) --profile local
+
+# Skaffold one-shot
+skaffold-run:
+	skaffold run --kube-context $(KUBE_CONTEXT) --profile local
+
+# Terraform
+tf-init:
+	cd $(TF_LOCAL) && terraform init
+
+tf-apply: tf-init
+	cd $(TF_LOCAL) && \
+	VAULT_ADDR=$(VAULT_ADDR) \
+	VAULT_TOKEN=$(VAULT_TOKEN) \
+	terraform apply -auto-approve
+
+tf-destroy:
+	cd $(TF_LOCAL) && \
+	VAULT_ADDR=$(VAULT_ADDR) \
+	VAULT_TOKEN=$(VAULT_TOKEN) \
+	terraform destroy -auto-approve
+
+# Unseal Vault après restart
+vault-unseal:
+	@echo "Unsealing Vault..."
+	kubectl --context=$(KUBE_CONTEXT) exec -n vault-dmzrasc vault-0 -- \
+		vault operator unseal $(VAULT_UNSEAL_KEY)
+
+# Teardown complet
+down:
+	skaffold delete --kube-context $(KUBE_CONTEXT) --profile local
+	k3d cluster stop dmzrasc
