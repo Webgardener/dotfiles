@@ -1,43 +1,54 @@
-KUBE_CONTEXT  = k3d-dmzrasc
-VAULT_ADDR    = http://localhost:8200
-TF_LOCAL      = terraform/local
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: dmzrasc
 
-.PHONY: up down tf-init tf-apply tf-destroy vault-unseal
+build:
+  local:
+    push: false              # pas de push en local, images chargées directement dans k3d
+  artifacts:
+    - image: mon-app-a
+      context: ../../images/mon-app-a    # dossier partagé images/
+      docker:
+        dockerfile: Dockerfile
 
-# Démarrage complet
-up: tf-apply skaffold-dev
+deploy:
+  helm:
+    releases:
+      - name: vault
+        chartPath: helm/wrappers/vault
+        namespace: vault-dmzrasc
+        valuesFiles:
+          - helm/values/local/vault.yaml
+        wait: true            # Skaffold attend que Vault soit Ready avant de continuer
 
-# Skaffold en mode watch
-skaffold-dev:
-	skaffold dev --kube-context $(KUBE_CONTEXT) --profile local
+      - name: postgres
+        chartPath: helm/wrappers/postgres
+        namespace: managed-services
+        valuesFiles:
+          - helm/values/local/postgres.yaml
+        wait: true
 
-# Skaffold one-shot
-skaffold-run:
-	skaffold run --kube-context $(KUBE_CONTEXT) --profile local
+      - name: keycloak
+        chartPath: helm/wrappers/keycloak
+        namespace: green
+        valuesFiles:
+          - helm/values/local/keycloak.yaml
 
-# Terraform
-tf-init:
-	cd $(TF_LOCAL) && terraform init
+portForward:
+  - resourceType: service
+    resourceName: vault
+    namespace: vault-dmzrasc
+    port: 8200
+    localPort: 8200
 
-tf-apply: tf-init
-	cd $(TF_LOCAL) && \
-	VAULT_ADDR=$(VAULT_ADDR) \
-	VAULT_TOKEN=$(VAULT_TOKEN) \
-	terraform apply -auto-approve
+  - resourceType: service
+    resourceName: keycloak
+    namespace: green
+    port: 80
+    localPort: 8080
 
-tf-destroy:
-	cd $(TF_LOCAL) && \
-	VAULT_ADDR=$(VAULT_ADDR) \
-	VAULT_TOKEN=$(VAULT_TOKEN) \
-	terraform destroy -auto-approve
-
-# Unseal Vault après restart
-vault-unseal:
-	@echo "Unsealing Vault..."
-	kubectl --context=$(KUBE_CONTEXT) exec -n vault-dmzrasc vault-0 -- \
-		vault operator unseal $(VAULT_UNSEAL_KEY)
-
-# Teardown complet
-down:
-	skaffold delete --kube-context $(KUBE_CONTEXT) --profile local
-	k3d cluster stop dmzrasc
+profiles:
+  - name: local
+    activation:
+      - kubeContext: k3d-dmzrasc
