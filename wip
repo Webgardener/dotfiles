@@ -1,34 +1,230 @@
-vault:
-  server:
-    image:
-      repository: <registry-privee>/<chemin>/vault
-      tag: "1.17.0"        # version à adapter
-      pullPolicy: IfNotPresent
 
-    dev:
-      enabled: false
-    standalone:
-      enabled: true
-      config: |
-        ui = true
-        listener "tcp" {
-          tls_disable = 1
-          address     = "[::]:8200"
-        }
-        storage "file" {
-          path = "/vault/data"
-        }
-    dataStorage:
-      enabled: true
-      size: 1Gi
-      storageClass: local-path
+---
 
-  injector:
-    enabled: true
-    image:
-      repository: <registry-privee>/<chemin>/vault-k8s   # image de l'injector
-      tag: "0.17.0"
+**`charts/vault/Chart.yaml`**
+```yaml
+apiVersion: v2
+name: vault
+description: Vault chart custom dmzrasc
+type: application
+version: 0.1.0
+appVersion: "1.17.0"
+```
 
-  ui:
-    enabled: true
-    serviceType: ClusterIP
+---
+
+**`charts/vault/values.yaml`**
+```yaml
+image:
+  repository: <registry-privee>/vault
+  tag: "1.17.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: <registry-secret>
+
+serviceAccount:
+  name: vault
+
+storage:
+  size: 1Gi
+  storageClass: local-path
+
+ui:
+  enabled: true
+
+injector:
+  enabled: true
+  image:
+    repository: <registry-privee>/vault-k8s
+    tag: "0.17.0"
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "250m"
+```
+
+---
+
+**`charts/vault/templates/serviceaccount.yaml`**
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vault
+    release: {{ .Release.Name }}
+```
+
+---
+
+**`charts/vault/templates/configmap.yaml`**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vault
+    release: {{ .Release.Name }}
+data:
+  vault.hcl: |
+    ui = {{ .Values.ui.enabled }}
+
+    listener "tcp" {
+      tls_disable = 1
+      address     = "[::]:8200"
+    }
+
+    storage "file" {
+      path = "/vault/data"
+    }
+```
+
+---
+
+**`charts/vault/templates/statefulset.yaml`**
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vault
+    release: {{ .Release.Name }}
+spec:
+  serviceName: vault-internal
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+        release: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      containers:
+        - name: vault
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - vault
+            - server
+            - -config=/vault/config/vault.hcl
+          ports:
+            - name: http
+              containerPort: 8200
+            - name: internal
+              containerPort: 8201
+          env:
+            - name: VAULT_ADDR
+              value: "http://127.0.0.1:8200"
+            - name: POD_IP_ADDR
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: config
+              mountPath: /vault/config
+            - name: data
+              mountPath: /vault/data
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204
+              port: 8200
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: vault-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.storage.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.size }}
+```
+
+---
+
+**`charts/vault/templates/service.yaml`**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vault
+    release: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  selector:
+    app: vault
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+    - name: internal
+      port: 8201
+      targetPort: 8201
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-internal
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vault
+    release: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: vault
+  ports:
+    - name: http
+      port: 8200
+    - name: internal
+      port: 8201
+```
+
+---
+
+**`values/local/vault.yaml`** *(surcharge locale)*
+```yaml
+storage:
+  storageClass: local-path   # storage class k3d
+```
+
+---
+
+**Déploiement**
+```bash
+helm upgrade --install vault helm/charts/vault \
+  --kube-context k3d-dmzrasc \
+  --namespace vault-dmzrasc \
+  -f helm/values/local/vault.yaml
+```
+
+---
+
