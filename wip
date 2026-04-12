@@ -1,7 +1,3 @@
-define helm_apply_app
-	helm template $(1) ./$(CHARTS_DIR)/$(1) \
-		--namespace $(2) \
-		-f ./$(CHARTS_DIR)/$(1)/values-$(ENV).yaml \
-		$(foreach image,$(3),--set $(image).repository=$(call get_tag,$(image))) \
-	| kubectl --context=$(KUBE_CONTEXT) apply -f -
-endef
+deploy-keycloak:
+	@echo "$(foreach image,keycloak illumio,--set $(image).repository=$(call get_tag,$(image)))"
+	$(call helm_apply_app,keycloak,green,keycloak illumio)
