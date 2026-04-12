@@ -1,37 +1,21 @@
-TAGS_FILE = /tmp/skaffold-tags.json
-PID_FILE  = /tmp/skaffold-watch.pid
+# Helper pour lire le tag depuis skaffold-tags.json
+define get_tag
+$(shell jq -r '.builds[] | select(.imageName=="$(1)") | .tag' $(TAGS_FILE))
+endef
 
-skaffold-watch:
-	skaffold dev \
-		--profile local \
-		--kube-context $(KUBE_CONTEXT) \
-		--file-output $(TAGS_FILE) \
-		>/dev/null 2>&1 & \
-	echo $$! > $(PID_FILE)
-	@echo "Skaffold watch démarré (pid: $$(cat $(PID_FILE)))"
-
-skaffold-stop:
-	@if [ -f $(PID_FILE) ]; then \
-		kill $$(cat $(PID_FILE)) && rm $(PID_FILE); \
-		echo "Skaffold watch stoppé"; \
-	else \
-		echo "Skaffold watch non démarré"; \
-	fi
-
-deploy-keycloak:
-	$(eval KEYCLOAK_TAG := $(shell jq -r '.builds[] | select(.imageName=="keycloak") | .tag' $(TAGS_FILE)))
-	helm template keycloak helm/charts/keycloak \
-		--namespace green \
-		-f helm/values/local/keycloak.yaml \
-		--set image.repository=$(KEYCLOAK_TAG) \
+# Helper helm apply avec tag skaffold
+define helm_apply_app
+	helm template $(1) $(CHARTS_DIR)/$(1) \
+		--namespace $(2) \
+		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
+		--set image.repository=$(call get_tag,$(1)) \
 	| kubectl --context=$(KUBE_CONTEXT) apply -f -
+endef
 
-# Bootstrap complet
-bootstrap: create-namespaces create-registry-secrets \
-           deploy-vault deploy-postgres \
-           port-forward tf-apply \
-           skaffold-watch deploy-all
-
-# Teardown
-down: skaffold-stop
-	k3d cluster delete $(CLUSTER_NAME)
+# Helper helm apply sans tag (pour vault, postgres, keycloak — images externes)
+define helm_apply
+	helm template $(1) $(CHARTS_DIR)/$(1) \
+		--namespace $(2) \
+		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
+	| kubectl --context=$(KUBE_CONTEXT) apply -f -
+endef
