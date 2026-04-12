@@ -1,1 +1,37 @@
-test
+TAGS_FILE = /tmp/skaffold-tags.json
+PID_FILE  = /tmp/skaffold-watch.pid
+
+skaffold-watch:
+	skaffold dev \
+		--profile local \
+		--kube-context $(KUBE_CONTEXT) \
+		--file-output $(TAGS_FILE) \
+		>/dev/null 2>&1 & \
+	echo $$! > $(PID_FILE)
+	@echo "Skaffold watch démarré (pid: $$(cat $(PID_FILE)))"
+
+skaffold-stop:
+	@if [ -f $(PID_FILE) ]; then \
+		kill $$(cat $(PID_FILE)) && rm $(PID_FILE); \
+		echo "Skaffold watch stoppé"; \
+	else \
+		echo "Skaffold watch non démarré"; \
+	fi
+
+deploy-keycloak:
+	$(eval KEYCLOAK_TAG := $(shell jq -r '.builds[] | select(.imageName=="keycloak") | .tag' $(TAGS_FILE)))
+	helm template keycloak helm/charts/keycloak \
+		--namespace green \
+		-f helm/values/local/keycloak.yaml \
+		--set image.repository=$(KEYCLOAK_TAG) \
+	| kubectl --context=$(KUBE_CONTEXT) apply -f -
+
+# Bootstrap complet
+bootstrap: create-namespaces create-registry-secrets \
+           deploy-vault deploy-postgres \
+           port-forward tf-apply \
+           skaffold-watch deploy-all
+
+# Teardown
+down: skaffold-stop
+	k3d cluster delete $(CLUSTER_NAME)
