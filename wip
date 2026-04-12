@@ -1,21 +1,7 @@
-# Helper pour lire le tag depuis skaffold-tags.json
-define get_tag
-$(shell jq -r '.builds[] | select(.imageName=="$(1)") | .tag' $(TAGS_FILE))
-endef
-
-# Helper helm apply avec tag skaffold
 define helm_apply_app
-	helm template $(1) $(CHARTS_DIR)/$(1) \
+	helm template $(1) ./$(CHARTS_DIR)/$(1) \
 		--namespace $(2) \
-		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
-		--set image.repository=$(call get_tag,$(1)) \
-	| kubectl --context=$(KUBE_CONTEXT) apply -f -
-endef
-
-# Helper helm apply sans tag (pour vault, postgres, keycloak — images externes)
-define helm_apply
-	helm template $(1) $(CHARTS_DIR)/$(1) \
-		--namespace $(2) \
-		-f $(VALUES_DIR)/$(ENV)/$(1).yaml \
+		-f ./$(CHARTS_DIR)/$(1)/values-$(ENV).yaml \
+		$(foreach image,$(3),--set $(image).repository=$(call get_tag,$(image))) \
 	| kubectl --context=$(KUBE_CONTEXT) apply -f -
 endef
