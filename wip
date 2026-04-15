@@ -1,3 +1,43 @@
+CLUSTER_NAME   ?= my-cluster
+OUTPUT_DIR     ?= ./certs
+SCRIPTS_DIR    ?= ./scripts
+
+TERRAFORM      := terraform
+GENERATE_CERTS := $(SCRIPTS_DIR)/generate_vault_k3d_certs.sh
+
+.PHONY: all init plan apply destroy certs clean
+
+## Default target
+all: apply
+
+## Generate k3d CA cert (prerequisite for all terraform targets)
+certs:
+	@echo "⚙️  Generating k3d certs for cluster: $(CLUSTER_NAME)"
+	@CLUSTER_NAME=$(CLUSTER_NAME) OUTPUT_DIR=$(OUTPUT_DIR) bash $(GENERATE_CERTS)
+
+## Terraform init (requires certs)
+init: certs
+	$(TERRAFORM) init
+
+## Terraform plan (requires certs)
+plan: certs
+	$(TERRAFORM) plan
+
+## Terraform apply (requires certs)
+apply: certs
+	$(TERRAFORM) apply -auto-approve
+
+## Terraform destroy
+destroy:
+	$(TERRAFORM) destroy -auto-approve
+
+## Remove generated certs
+clean:
+	rm -rf $(OUTPUT_DIR)
+	@echo "🧹 Cleaned $(OUTPUT_DIR)"
+
+
+
 #!/bin/bash
 set -euo pipefail
 
