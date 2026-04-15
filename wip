@@ -1,112 +1,39 @@
-CLUSTER_NAME   ?= my-cluster
-OUTPUT_DIR     ?= ./certs
-SCRIPTS_DIR    ?= ./scripts
-
-TERRAFORM      := terraform
-GENERATE_CERTS := $(SCRIPTS_DIR)/generate_vault_k3d_certs.sh
-
-.PHONY: all init plan apply destroy certs clean
-
-## Default target
-all: apply
-
-## Generate k3d CA cert (prerequisite for all terraform targets)
-certs:
-	@echo "⚙️  Generating k3d certs for cluster: $(CLUSTER_NAME)"
-	@CLUSTER_NAME=$(CLUSTER_NAME) OUTPUT_DIR=$(OUTPUT_DIR) bash $(GENERATE_CERTS)
-
-## Terraform init (requires certs)
-init: certs
-	$(TERRAFORM) init
-
-## Terraform plan (requires certs)
-plan: certs
-	$(TERRAFORM) plan
-
-## Terraform apply (requires certs)
-apply: certs
-	$(TERRAFORM) apply -auto-approve
-
-## Terraform destroy
-destroy:
-	$(TERRAFORM) destroy -auto-approve
-
-## Remove generated certs
-clean:
-	rm -rf $(OUTPUT_DIR)
-	@echo "🧹 Cleaned $(OUTPUT_DIR)"
-
-
-
 #!/bin/bash
 set -euo pipefail
 
 # ─────────────────────────────────────────────
-# Usage: ./generate_vault_k3d_certs.sh <cluster-name> [output-dir]
-# Example: ./generate_vault_k3d_certs.sh my-cluster ./certs
+# Called by Makefile at project root
+# Extracts k3d CA cert and writes it next to the terraform module
 # ─────────────────────────────────────────────
 
-CLUSTER_NAME="${1:-}"
-OUTPUT_DIR="${2:-./certs}"
+CLUSTER_NAME="${CLUSTER_NAME:-}"
+TF_MODULE_DIR="${TF_MODULE_DIR:-./infra/vault}"
 
 if [[ -z "$CLUSTER_NAME" ]]; then
-  echo "❌ Error: cluster name is required"
-  echo "Usage: $0 <cluster-name> [output-dir]"
+  echo "❌ Error: CLUSTER_NAME environment variable is required"
   exit 1
 fi
 
-# Check dependencies
-for cmd in k3d kubectl base64; do
-  if ! command -v "$cmd" &>/dev/null; then
-    echo "❌ Missing dependency: $cmd"
-    exit 1
-  fi
-done
+if ! command -v k3d &>/dev/null; then
+  echo "❌ Missing dependency: k3d"
+  exit 1
+fi
+
+if [[ ! -d "$TF_MODULE_DIR" ]]; then
+  echo "❌ Directory not found: $TF_MODULE_DIR"
+  exit 1
+fi
 
 echo "🔍 Fetching kubeconfig for cluster: $CLUSTER_NAME"
 
-# Get kubeconfig for the cluster
 KUBECONFIG_RAW=$(k3d kubeconfig get "$CLUSTER_NAME")
 
-# Extract CA cert (base64 encoded in kubeconfig)
 CA_CERT_B64=$(echo "$KUBECONFIG_RAW" | grep "certificate-authority-data" | awk '{print $2}' | tr -d '[:space:]')
-
 if [[ -z "$CA_CERT_B64" ]]; then
   echo "❌ Could not find certificate-authority-data in kubeconfig"
   exit 1
 fi
 
-# Extract Kubernetes API host
-KUBE_HOST=$(echo "$KUBECONFIG_RAW" | grep "server:" | awk '{print $2}' | tr -d '[:space:]')
+echo "$CA_CERT_B64" | base64 -d > "$TF_MODULE_DIR/ca.crt"
 
-if [[ -z "$KUBE_HOST" ]]; then
-  echo "❌ Could not find server host in kubeconfig"
-  exit 1
-fi
-
-# Create output directory
-mkdir -p "$OUTPUT_DIR"
-
-# Decode and save CA cert
-echo "$CA_CERT_B64" | base64 -d > "$OUTPUT_DIR/ca.crt"
-
-echo "✅ CA cert saved to $OUTPUT_DIR/ca.crt"
-echo "✅ Kubernetes host: $KUBE_HOST"
-
-# Generate terraform.tfvars snippet
-cat > "$OUTPUT_DIR/vault_k8s_auth.auto.tfvars" <<EOF
-kubernetes_host    = "$KUBE_HOST"
-kubernetes_ca_cert = "$OUTPUT_DIR/ca.crt"
-EOF
-
-echo "✅ Terraform tfvars snippet saved to $OUTPUT_DIR/vault_k8s_auth.auto.tfvars"
-echo ""
-echo "─────────────────────────────────────────────"
-echo "Use in your Terraform resource:"
-echo ""
-echo "  resource \"vault_kubernetes_auth_backend_config\" \"config\" {"
-echo "    backend            = vault_auth_backend.kubernetes.path"
-echo "    kubernetes_host    = \"$KUBE_HOST\""
-echo "    kubernetes_ca_cert = file(\"$OUTPUT_DIR/ca.crt\")"
-echo "  }"
-echo "─────────────────────────────────────────────"
+echo "✅ ca.crt saved → $TF_MODULE_DIR/ca.crt"
