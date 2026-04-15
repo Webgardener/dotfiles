@@ -1,190 +1,72 @@
-ENV           ?= local
-KUBE_CONTEXT   = k3d-dmzrasc
-CLUSTER_NAME   = dmzrasc
-NAMESPACES     = green blue tools data managed-services
-REGISTRY_SECRET_FILE = <chemin>/docker-itg.yaml
-VAULT_LOCAL_PORT = 8201
+#!/bin/bash
+set -euo pipefail
 
-.DEFAULT_GOAL := help
+# ─────────────────────────────────────────────
+# Usage: ./generate_vault_k3d_certs.sh <cluster-name> [output-dir]
+# Example: ./generate_vault_k3d_certs.sh my-cluster ./certs
+# ─────────────────────────────────────────────
 
-# ==============================================================================
-# Help
-# ==============================================================================
-help:
-	@echo ""
-	@echo "Usage: make <target> [ENV=local|staging|prod]"
-	@echo ""
-	@echo "  init                  Bootstrap complet (idempotent)"
-	@echo "  init SCRATCH=true     Tout supprimer puis recréer"
-	@echo "  dev                   Lance skaffold dev (watch + deploy auto)"
-	@echo "  down                  Stopper et supprimer le cluster"
-	@echo "  status                État des pods"
-	@echo "  tf-apply              Appliquer Terraform"
-	@echo "  tf-destroy            Détruire Terraform"
-	@echo ""
+CLUSTER_NAME="${1:-}"
+OUTPUT_DIR="${2:-./certs}"
 
-# ==============================================================================
-# Helpers
-# ==============================================================================
-define helm_apply
-	helm template $(1) ./$(CHARTS_DIR)/$(1) \
-		--namespace $(2) \
-		-f ./$(CHARTS_DIR)/$(1)/values-$(ENV).yaml \
-	| kubectl --context=$(KUBE_CONTEXT) apply -f -
-endef
+if [[ -z "$CLUSTER_NAME" ]]; then
+  echo "❌ Error: cluster name is required"
+  echo "Usage: $0 <cluster-name> [output-dir]"
+  exit 1
+fi
 
-# ==============================================================================
-# Init
-# ==============================================================================
-.PHONY: init
+# Check dependencies
+for cmd in k3d kubectl base64; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "❌ Missing dependency: $cmd"
+    exit 1
+  fi
+done
 
-init:
-ifdef SCRATCH
-	@echo ">>> Mode from-scratch: suppression du cluster..."
-	$(MAKE) delete-cluster
-endif
-	@echo ">>> Bootstrap dmzrasc [ENV=$(ENV)]"
-	$(MAKE) create-cluster
-	$(MAKE) create-namespaces
-	$(MAKE) create-registry-secrets
-	$(MAKE) deploy-vault
-	$(MAKE) deploy-postgres
-	$(MAKE) port-forward
-	$(MAKE) tf-apply
-	@echo ">>> dmzrasc prêt — lance 'make dev' pour démarrer"
+echo "🔍 Fetching kubeconfig for cluster: $CLUSTER_NAME"
 
-# ==============================================================================
-# Cluster
-# ==============================================================================
-.PHONY: create-cluster delete-cluster create-namespaces
+# Get kubeconfig for the cluster
+KUBECONFIG_RAW=$(k3d kubeconfig get "$CLUSTER_NAME")
 
-create-cluster:
-	@if k3d cluster list | grep -q $(CLUSTER_NAME); then \
-		echo "Cluster $(CLUSTER_NAME) déjà existant — skip"; \
-	else \
-		envsubst < registries.yaml.tpl > /tmp/registries.yaml; \
-		k3d cluster create $(CLUSTER_NAME) \
-			--servers 1 \
-			--agents 2 \
-			--k3s-arg "--disable=traefik@server:0" \
-			--registry-config /tmp/registries.yaml; \
-		rm /tmp/registries.yaml; \
-	fi
+# Extract CA cert (base64 encoded in kubeconfig)
+CA_CERT_B64=$(echo "$KUBECONFIG_RAW" | grep "certificate-authority-data" | awk '{print $2}' | tr -d '[:space:]')
 
-delete-cluster:
-	@if k3d cluster list | grep -q $(CLUSTER_NAME); then \
-		k3d cluster delete $(CLUSTER_NAME); \
-	else \
-		echo "Cluster $(CLUSTER_NAME) inexistant — skip"; \
-	fi
+if [[ -z "$CA_CERT_B64" ]]; then
+  echo "❌ Could not find certificate-authority-data in kubeconfig"
+  exit 1
+fi
 
-create-namespaces:
-	@for ns in $(NAMESPACES); do \
-		kubectl --context=$(KUBE_CONTEXT) create namespace $$ns \
-			--dry-run=client -o yaml \
-		| kubectl --context=$(KUBE_CONTEXT) apply -f -; \
-	done
+# Extract Kubernetes API host
+KUBE_HOST=$(echo "$KUBECONFIG_RAW" | grep "server:" | awk '{print $2}' | tr -d '[:space:]')
 
-# ==============================================================================
-# Registry secrets (local uniquement)
-# ==============================================================================
-.PHONY: create-registry-secrets
+if [[ -z "$KUBE_HOST" ]]; then
+  echo "❌ Could not find server host in kubeconfig"
+  exit 1
+fi
 
-create-registry-secrets:
-ifeq ($(ENV),local)
-	@for ns in $(NAMESPACES); do \
-		echo "Registry secret → $$ns"; \
-		envsubst < $(REGISTRY_SECRET_FILE) \
-		| kubectl --context=$(KUBE_CONTEXT) apply -n $$ns -f -; \
-	done
-else
-	@echo "Skipping registry secrets — managed by IBM Cloud in $(ENV)"
-endif
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
 
-# ==============================================================================
-# Deploy infra (vault + postgres — local uniquement)
-# ==============================================================================
-.PHONY: deploy-vault deploy-postgres
+# Decode and save CA cert
+echo "$CA_CERT_B64" | base64 -d > "$OUTPUT_DIR/ca.crt"
 
-deploy-vault:
-ifeq ($(ENV),local)
-	@echo "Deploying Vault..."
-	$(call helm_apply,vault,managed-services)
-else
-	@echo "Skipping Vault — managed service in $(ENV)"
-endif
+echo "✅ CA cert saved to $OUTPUT_DIR/ca.crt"
+echo "✅ Kubernetes host: $KUBE_HOST"
 
-deploy-postgres:
-ifeq ($(ENV),local)
-	@echo "Deploying PostgreSQL..."
-	$(call helm_apply,postgres,managed-services)
-else
-	@echo "Skipping PostgreSQL — managed service in $(ENV)"
-endif
+# Generate terraform.tfvars snippet
+cat > "$OUTPUT_DIR/vault_k8s_auth.auto.tfvars" <<EOF
+kubernetes_host    = "$KUBE_HOST"
+kubernetes_ca_cert = "$OUTPUT_DIR/ca.crt"
+EOF
 
-# ==============================================================================
-# Port-forward (local uniquement)
-# ==============================================================================
-.PHONY: port-forward
-
-port-forward:
-ifeq ($(ENV),local)
-	@echo "Waiting for Vault to be ready..."
-	kubectl --context=$(KUBE_CONTEXT) wait pod \
-		-n managed-services \
-		-l app=vault \
-		--for=condition=Ready \
-		--timeout=120s
-	kubectl --context=$(KUBE_CONTEXT) port-forward \
-		-n managed-services svc/vault $(VAULT_LOCAL_PORT):8200 \
-		>/dev/null 2>&1 &
-	@echo "Vault UI → http://localhost:$(VAULT_LOCAL_PORT)"
-else
-	@echo "Skipping port-forward — not needed in $(ENV)"
-endif
-
-# ==============================================================================
-# Terraform
-# ==============================================================================
-.PHONY: tf-apply tf-destroy
-
-tf-apply:
-	bash -c "source infra-variables.sh && export_$(ENV) && \
-	export VAULT_ADDR=http://localhost:$(VAULT_LOCAL_PORT) && \
-	export VAULT_TOKEN=$$VAULT_TOKEN && \
-	cd terraform/$(ENV) && terraform init && terraform apply -auto-approve"
-
-tf-destroy:
-	bash -c "source infra-variables.sh && export_$(ENV) && \
-	export VAULT_ADDR=http://localhost:$(VAULT_LOCAL_PORT) && \
-	export VAULT_TOKEN=$$VAULT_TOKEN && \
-	cd terraform/$(ENV) && terraform destroy -auto-approve"
-
-# ==============================================================================
-# Skaffold — apps (build + deploy + watch)
-# ==============================================================================
-.PHONY: dev skaffold-run
-
-dev:
-	skaffold dev \
-		--profile local \
-		--kube-context $(KUBE_CONTEXT)
-
-skaffold-run:
-	skaffold run \
-		--profile local \
-		--kube-context $(KUBE_CONTEXT)
-
-# ==============================================================================
-# Utilitaires
-# ==============================================================================
-.PHONY: status down
-
-status:
-	@for ns in $(NAMESPACES); do \
-		echo "\n--- $$ns ---"; \
-		kubectl --context=$(KUBE_CONTEXT) get pods -n $$ns 2>/dev/null || true; \
-	done
-
-down:
-	$(MAKE) delete-cluster
+echo "✅ Terraform tfvars snippet saved to $OUTPUT_DIR/vault_k8s_auth.auto.tfvars"
+echo ""
+echo "─────────────────────────────────────────────"
+echo "Use in your Terraform resource:"
+echo ""
+echo "  resource \"vault_kubernetes_auth_backend_config\" \"config\" {"
+echo "    backend            = vault_auth_backend.kubernetes.path"
+echo "    kubernetes_host    = \"$KUBE_HOST\""
+echo "    kubernetes_ca_cert = file(\"$OUTPUT_DIR/ca.crt\")"
+echo "  }"
+echo "─────────────────────────────────────────────"
